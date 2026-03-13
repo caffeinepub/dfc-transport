@@ -25,6 +25,8 @@ export default function Dashboard({ onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("entries");
   const { data: totalCommission = 0 } = useGetTotalCommission();
 
+  const isRecords = activeTab === "records";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -106,7 +108,11 @@ export default function Dashboard({ onLogout }: Props) {
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+      <main
+        className={`flex-1 w-full py-6 ${
+          isRecords ? "px-2 sm:px-4" : "max-w-7xl mx-auto px-4 sm:px-6"
+        }`}
+      >
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 8 }}

@@ -1,35 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { TransportEntry as BackendEntry } from "../backend";
-import { useActor } from "./useActor";
+import {
+  type LocalEntry,
+  getAllEntries,
+  getTotalCommission,
+  addEntry as lsAddEntry,
+  deleteEntry as lsDeleteEntry,
+  toggleOwnerPaid as lsToggleOwnerPaid,
+  togglePartyPaid as lsTogglePartyPaid,
+  updateEntry as lsUpdateEntry,
+} from "./useLocalStorage";
 
-export type TransportEntry = BackendEntry;
+export type TransportEntry = LocalEntry;
 
 export function useGetAllEntries() {
-  const { actor } = useActor();
   return useQuery<TransportEntry[]>({
     queryKey: ["entries"],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllEntries();
-    },
-    enabled: !!actor,
+    queryFn: () => getAllEntries(),
   });
 }
 
 export function useGetTotalCommission() {
-  const { actor } = useActor();
   return useQuery<number>({
     queryKey: ["totalCommission"],
-    queryFn: async () => {
-      if (!actor) return 0;
-      return actor.getTotalCommission();
-    },
-    enabled: !!actor,
+    queryFn: () => getTotalCommission(),
   });
 }
 
 export function useAddEntry() {
-  const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (params: {
@@ -40,25 +37,32 @@ export function useAddEntry() {
       partyName: string;
       partyRate: number;
       partyAdvance: number;
+      partyAdvanceDate?: string;
+      partyAdvanceProof?: string;
       ownerName: string;
       ownerRate: number;
       ownerAdvance: number;
+      ownerAdvanceDate?: string;
+      ownerAdvanceProof?: string;
       comment: string;
     }) => {
-      if (!actor) throw new Error("Backend not connected");
-      return actor.addEntry(
-        params.date,
-        params.gadiNumber,
-        params.fromLocation,
-        params.toLocation,
-        params.partyName,
-        params.partyRate,
-        params.partyAdvance,
-        params.ownerName,
-        params.ownerRate,
-        params.ownerAdvance,
-        params.comment,
-      );
+      return lsAddEntry(params);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entries"] });
+      queryClient.invalidateQueries({ queryKey: ["totalCommission"] });
+    },
+  });
+}
+
+export function useUpdateEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      billNo: bigint;
+      data: Partial<Omit<TransportEntry, "bill_no">>;
+    }) => {
+      return lsUpdateEntry(params.billNo, params.data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entries"] });
@@ -68,16 +72,38 @@ export function useAddEntry() {
 }
 
 export function useDeleteEntry() {
-  const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (billNo: bigint) => {
-      if (!actor) throw new Error("Backend not connected");
-      return actor.deleteEntry(billNo);
+      return lsDeleteEntry(billNo);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entries"] });
       queryClient.invalidateQueries({ queryKey: ["totalCommission"] });
+    },
+  });
+}
+
+export function useToggleOwnerPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (billNo: bigint) => {
+      return lsToggleOwnerPaid(billNo);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entries"] });
+    },
+  });
+}
+
+export function useTogglePartyPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (billNo: bigint) => {
+      return lsTogglePartyPaid(billNo);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entries"] });
     },
   });
 }
