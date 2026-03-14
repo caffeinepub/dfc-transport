@@ -41,6 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarDays,
   CheckCircle2,
+  FileText,
   FileX,
   ImageIcon,
   IndianRupee,
@@ -63,6 +64,311 @@ import {
 } from "../hooks/useQueries";
 
 const COMMISSION_PER_GADI = 2000;
+
+function billLabel(billNo: bigint) {
+  return `DFC-${billNo.toString().padStart(4, "0")}`;
+}
+
+function downloadLR(entry: TransportEntry) {
+  // biome-ignore lint/suspicious/noExplicitAny: jsPDF loaded via CDN
+  const { jsPDF } = (window as any).jspdf;
+  const doc = new jsPDF();
+  const bill = billLabel(entry.bill_no);
+  const partyBal = entry.party_rate - entry.party_advance;
+  const ownerBal = entry.owner_rate - entry.owner_advance;
+
+  doc.setFontSize(22);
+  doc.text("DFC TRANSPORT COMPANY", 105, 15, { align: "center" });
+  doc.setFontSize(10);
+  doc.text("All India Transport Service", 105, 22, { align: "center" });
+  doc.text("Phone: 9817783604", 105, 27, { align: "center" });
+  doc.setFontSize(16);
+  doc.text("LORRY RECEIPT (LR)", 105, 38, { align: "center" });
+
+  doc.rect(15, 45, 90, 12);
+  doc.text(`LR No: ${bill}`, 18, 53);
+  doc.rect(105, 45, 90, 12);
+  doc.text(`Date: ${entry.date}`, 108, 53);
+
+  doc.rect(15, 60, 90, 18);
+  doc.text("Consignor (Sender):", 18, 67);
+  doc.text(entry.party_name || "-", 18, 74);
+  doc.rect(105, 60, 90, 18);
+  doc.text("Consignee (Receiver):", 108, 67);
+  doc.text("-", 108, 74);
+
+  doc.rect(15, 82, 90, 12);
+  doc.text(`Truck No: ${entry.gadi_number}`, 18, 90);
+  doc.rect(105, 82, 90, 12);
+  doc.text(`Owner: ${entry.owner_name}`, 108, 90);
+
+  doc.rect(15, 97, 180, 12);
+  doc.text(`Route: ${entry.from_location} → ${entry.to_location}`, 18, 105);
+
+  doc.rect(15, 115, 180, 10);
+  doc.text("Description of Goods", 18, 122);
+  doc.text("Weight", 120, 122);
+  doc.text("Freight", 160, 122);
+  doc.rect(15, 125, 180, 15);
+  doc.text("Transport Material", 18, 134);
+  doc.text("-", 125, 134);
+  doc.text("To Pay", 160, 134);
+
+  doc.rect(15, 145, 90, 12);
+  doc.text(`Party Balance: ${partyBal}`, 18, 153);
+  doc.rect(105, 145, 90, 12);
+  doc.text(`Owner Balance: ${ownerBal}`, 108, 153);
+
+  doc.rect(15, 160, 180, 10);
+  doc.text("Broker Commission: ₹2000", 18, 167);
+
+  doc.text("Receiver Sign", 20, 185);
+  doc.line(15, 180, 70, 180);
+  doc.text("Authorized Signatory", 150, 185);
+  doc.line(135, 180, 200, 180);
+
+  doc.setFontSize(9);
+  doc.text("This is a computer generated Lorry Receipt.", 105, 198, {
+    align: "center",
+  });
+
+  doc.save(`${bill}_LR.pdf`);
+}
+
+function downloadBill(entry: TransportEntry) {
+  // biome-ignore lint/suspicious/noExplicitAny: jsPDF loaded via CDN
+  const { jsPDF } = (window as any).jspdf;
+  const doc = new jsPDF();
+  const bill = billLabel(entry.bill_no);
+  const partyBal = entry.party_rate - entry.party_advance;
+  const commission = 2000;
+
+  doc.setFontSize(20);
+  doc.text("DFC TRANSPORT - PARTY BILL", 105, 18, { align: "center" });
+  doc.setFontSize(12);
+  doc.text(`Bill No: ${bill}`, 20, 40);
+  doc.text(`Date: ${entry.date}`, 150, 40);
+
+  doc.rect(20, 50, 170, 12);
+  doc.text(`Party Name: ${entry.party_name}`, 24, 58);
+  doc.rect(20, 65, 170, 12);
+  doc.text(
+    `Truck No: ${entry.gadi_number}    Route: ${entry.from_location} → ${entry.to_location}`,
+    24,
+    73,
+  );
+
+  doc.rect(20, 85, 170, 10);
+  doc.text("Description", 24, 92);
+  doc.text("Amount", 150, 92);
+
+  doc.rect(20, 95, 170, 12);
+  doc.text("Freight Charges", 24, 103);
+  doc.text(String(partyBal + commission), 150, 103);
+
+  doc.rect(20, 107, 170, 12);
+  doc.text("Broker Commission", 24, 115);
+  doc.text(String(commission), 150, 115);
+
+  doc.rect(20, 119, 170, 12);
+  doc.text("Balance Amount", 24, 127);
+  doc.text(String(partyBal), 150, 127);
+
+  doc.text("Authorized Signatory", 150, 170);
+  doc.line(140, 165, 200, 165);
+
+  doc.save(`${bill}_Party_Bill.pdf`);
+}
+async function downloadLoadingSlip(entry: TransportEntry) {
+  // biome-ignore lint/suspicious/noExplicitAny: jsPDF loaded via CDN
+  const { jsPDF } = (window as any).jspdf;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const bill = billLabel(entry.bill_no);
+  const freight = entry.party_rate;
+  const advance = entry.party_advance;
+  const balance = freight - advance;
+
+  const pageW = 210;
+  const margin = 14;
+  const contentW = pageW - margin * 2;
+
+  // ── RED HEADER ───────────────────────────────────────────────────
+  const headerH = 38;
+  doc.setFillColor(200, 0, 0);
+  doc.rect(0, 0, pageW, headerH, "F");
+
+  // ── LOGO ─────────────────────────────────────────────────────────
+  try {
+    await new Promise<void>((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        doc.addImage(img, "PNG", margin, 4, 30, 30);
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = "/assets/uploads/IMG_20260302_162344-1.png";
+    });
+  } catch (_) {}
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("DEEPANSHU FRIGHT CARRIER", pageW / 2 + 10, 12, { align: "center" });
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("Sister Concern : Shivani Roadlines", pageW / 2 + 10, 19, {
+    align: "center",
+  });
+
+  doc.setFontSize(8);
+  doc.text(
+    "Mumbai Office : 102, Ridhi Arcade, Plot No.857 C, Near RTO Office, Steel Market, Kalamboli, Mumbai - 410218",
+    pageW / 2 + 10,
+    25,
+    { align: "center" },
+  );
+  doc.text(
+    "Mobile : 9817783604 / 9817983604  |  Email : deepanshufrightcarrier@gmail.com",
+    pageW / 2 + 10,
+    31,
+    { align: "center" },
+  );
+
+  // ── TITLE ────────────────────────────────────────────────────────
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text("LOADING SLIP", pageW / 2, 46, { align: "center" });
+  doc.setLineWidth(0.5);
+  doc.line(margin, 49, pageW - margin, 49);
+
+  // ── SLIP NO / DATE ───────────────────────────────────────────────
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  let y = 57;
+  doc.rect(margin, y - 5, contentW / 2 - 2, 10);
+  doc.rect(margin + contentW / 2 + 2, y - 5, contentW / 2 - 2, 10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Loading Slip No:", margin + 2, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(bill, margin + 36, y);
+  doc.setFont("helvetica", "bold");
+  doc.text("Date:", margin + contentW / 2 + 4, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.date, margin + contentW / 2 + 18, y);
+
+  // ── PARTY ────────────────────────────────────────────────────────
+  y = 62;
+  doc.rect(margin, y - 5, contentW, 10);
+  doc.setFont("helvetica", "bold");
+  doc.text("TO, M/S :", margin + 2, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.party_name || "-", margin + 22, y);
+
+  // ── VEHICLE / OWNER ──────────────────────────────────────────────
+  y = 78;
+  doc.rect(margin, y - 5, contentW / 2 - 2, 10);
+  doc.rect(margin + contentW / 2 + 2, y - 5, contentW / 2 - 2, 10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Vehicle No:", margin + 2, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.gadi_number || "-", margin + 26, y);
+  doc.setFont("helvetica", "bold");
+  doc.text("Owner:", margin + contentW / 2 + 4, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.owner_name || "-", margin + contentW / 2 + 20, y);
+
+  // ── ROUTE ────────────────────────────────────────────────────────
+  y = 94;
+  doc.rect(margin, y - 5, contentW / 2 - 2, 10);
+  doc.rect(margin + contentW / 2 + 2, y - 5, contentW / 2 - 2, 10);
+  doc.setFont("helvetica", "bold");
+  doc.text("From Station:", margin + 2, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.from_location || "-", margin + 30, y);
+  doc.setFont("helvetica", "bold");
+  doc.text("To Station:", margin + contentW / 2 + 4, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.to_location || "-", margin + contentW / 2 + 26, y);
+
+  // ── FREIGHT TABLE ────────────────────────────────────────────────
+  y = 108;
+  doc.setFillColor(220, 220, 220);
+  doc.rect(margin, y - 6, contentW, 8, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Description", margin + 4, y - 0.5);
+  doc.text("Amount (Rs)", pageW - margin - 4, y - 0.5, { align: "right" });
+
+  const rows = [
+    ["Freight Rs", `Rs. ${freight.toLocaleString("en-IN")}`],
+    ["Advance Rs", `Rs. ${advance.toLocaleString("en-IN")}`],
+    ["Balance Rs", `Rs. ${balance.toLocaleString("en-IN")}`],
+  ];
+  y += 4;
+  doc.setFont("helvetica", "normal");
+  for (const [label, val] of rows) {
+    doc.rect(margin, y - 0.5, contentW, 9);
+    doc.text(label, margin + 4, y + 5.5);
+    doc.text(val, pageW - margin - 4, y + 5.5, { align: "right" });
+    y += 9;
+  }
+
+  // ── PAYMENT ──────────────────────────────────────────────────────
+  y += 6;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Payment Details", margin, y);
+  doc.line(margin, y + 1.5, pageW - margin, y + 1.5);
+
+  y += 9;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.rect(margin, y - 5, contentW, 10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Payment Done At (IMPS / NEFT) :", margin + 2, y);
+  doc.setFont("helvetica", "normal");
+  doc.text("__________________________", margin + 70, y);
+
+  y += 14;
+  // To Pay checkbox
+  doc.rect(margin, y - 4, 5, 5);
+  doc.text("To Pay", margin + 7, y);
+  // Adv Balance checkbox
+  doc.rect(margin + 40, y - 4, 5, 5);
+  doc.text("Adv Balance", margin + 47, y);
+
+  // ── BANK DETAILS ─────────────────────────────────────────────────
+  y += 14;
+  doc.setFillColor(240, 240, 240);
+  doc.rect(margin, y - 6, contentW, 32, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Bank Details", margin + 4, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Bank   : HDFC Bank", margin + 4, y + 8);
+  doc.text("A/C No : XXXXXXXXXXXX", margin + 4, y + 16);
+  doc.text("IFSC   : HDFC0000000", margin + 4, y + 24);
+
+  // ── SIGNATURE ────────────────────────────────────────────────────
+  y += 42;
+  doc.line(pageW - margin - 60, y, pageW - margin, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("For Deepanshu Fright Carrier", pageW - margin - 30, y + 5, {
+    align: "center",
+  });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Authorised Signatory", pageW - margin - 30, y + 10, {
+    align: "center",
+  });
+
+  doc.save(`${bill}_Loading_Slip.pdf`);
+}
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -708,6 +1014,45 @@ function EntryRow({
               data-ocid={`records.edit_button.${index}`}
             >
               <Pencil className="w-4 h-4" />
+            </Button>
+
+            {/* LR PDF */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 font-semibold"
+              onClick={() => downloadLR(entry)}
+              data-ocid={`records.lr_pdf.button.${index}`}
+              title="Download LR PDF"
+            >
+              <FileText className="w-3.5 h-3.5 mr-1" />
+              LR
+            </Button>
+
+            {/* Party Bill PDF */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 font-semibold"
+              onClick={() => downloadBill(entry)}
+              data-ocid={`records.party_bill.button.${index}`}
+              title="Download Party Bill PDF"
+            >
+              <FileText className="w-3.5 h-3.5 mr-1" />
+              Bill
+            </Button>
+
+            {/* Loading Slip PDF */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-red-700 hover:text-red-900 hover:bg-red-50 font-semibold"
+              onClick={() => downloadLoadingSlip(entry)}
+              data-ocid={`records.loading_slip.button.${index}`}
+              title="Download Loading Slip PDF"
+            >
+              <FileText className="w-3.5 h-3.5 mr-1" />
+              Slip
             </Button>
 
             {/* Delete */}
