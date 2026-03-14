@@ -69,6 +69,58 @@ function billLabel(billNo: bigint) {
   return `DFC-${billNo.toString().padStart(4, "0")}`;
 }
 
+function numberToWords(num: number): string {
+  if (num === 0) return "Zero";
+  const ones = [
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+  ];
+  const tens = [
+    "",
+    "",
+    "Twenty",
+    "Thirty",
+    "Forty",
+    "Fifty",
+    "Sixty",
+    "Seventy",
+    "Eighty",
+    "Ninety",
+  ];
+  function convert(n: number): string {
+    if (n < 20) return ones[n];
+    if (n < 100)
+      return tens[Math.floor(n / 10)] + (n % 10 ? ` ${ones[n % 10]}` : "");
+    if (n < 1000)
+      return `${ones[Math.floor(n / 100)]} Hundred${n % 100 ? ` ${convert(n % 100)}` : ""}`;
+    if (n < 100000)
+      return `${convert(Math.floor(n / 1000))} Thousand${n % 1000 ? ` ${convert(n % 1000)}` : ""}`;
+    if (n < 10000000)
+      return `${convert(Math.floor(n / 100000))} Lakh${n % 100000 ? ` ${convert(n % 100000)}` : ""}`;
+    return `${convert(Math.floor(n / 10000000))} Crore${n % 10000000 ? ` ${convert(n % 10000000)}` : ""}`;
+  }
+  const intPart = Math.floor(Math.abs(num));
+  return `${convert(intPart)} Only`;
+}
+
 function downloadLR(entry: TransportEntry) {
   // biome-ignore lint/suspicious/noExplicitAny: jsPDF loaded via CDN
   const { jsPDF } = (window as any).jspdf;
@@ -125,7 +177,7 @@ function downloadLR(entry: TransportEntry) {
   doc.text("Receiver Sign", 20, 185);
   doc.line(15, 180, 70, 180);
   doc.text("Authorized Signatory", 150, 185);
-  doc.line(135, 180, 200, 180);
+  doc.line(135, 180, 200, 185);
 
   doc.setFontSize(9);
   doc.text("This is a computer generated Lorry Receipt.", 105, 198, {
@@ -135,49 +187,297 @@ function downloadLR(entry: TransportEntry) {
   doc.save(`${bill}_LR.pdf`);
 }
 
+// ── INVOICE / PARTY BILL PDF (screenshot format) ──────────────────────────────
 function downloadBill(entry: TransportEntry) {
   // biome-ignore lint/suspicious/noExplicitAny: jsPDF loaded via CDN
   const { jsPDF } = (window as any).jspdf;
-  const doc = new jsPDF();
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const bill = billLabel(entry.bill_no);
-  const partyBal = entry.party_rate - entry.party_advance;
-  const commission = 2000;
+  const pageW = 210;
+  const margin = 12;
+  const contentW = pageW - margin * 2;
 
-  doc.setFontSize(20);
-  doc.text("DFC TRANSPORT - PARTY BILL", 105, 18, { align: "center" });
-  doc.setFontSize(12);
-  doc.text(`Bill No: ${bill}`, 20, 40);
-  doc.text(`Date: ${entry.date}`, 150, 40);
+  const partyRate = entry.party_rate;
+  const partyAdv = entry.party_advance;
+  const partyBal = partyRate - partyAdv;
+  const billNo = entry.bill_no.toString();
 
-  doc.rect(20, 50, 170, 12);
-  doc.text(`Party Name: ${entry.party_name}`, 24, 58);
-  doc.rect(20, 65, 170, 12);
+  // ── OUTER BORDER ────────────────────────────────────────────────────────────
+  doc.setLineWidth(0.8);
+  doc.rect(margin, 8, contentW, 275);
+
+  // ── COMPANY NAME (red bold) ──────────────────────────────────────────────────
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(200, 0, 0);
+  doc.text("DEEPANSHU FRIGHT CARRIER", pageW / 2, 18, { align: "center" });
+
+  // ── TAG LINE ─────────────────────────────────────────────────────────────────
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
   doc.text(
-    `Truck No: ${entry.gadi_number}    Route: ${entry.from_location} → ${entry.to_location}`,
-    24,
-    73,
+    "FLEET OWNERS & TRANSPORT CONTRACTORS & COMMISSION AGENT",
+    pageW / 2,
+    25,
+    { align: "center" },
   );
 
-  doc.rect(20, 85, 170, 10);
-  doc.text("Description", 24, 92);
-  doc.text("Amount", 150, 92);
+  // ── ADDRESS ──────────────────────────────────────────────────────────────────
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(
+    "102, 1st FLOOR, RIDDHI ARCADE, NEAR MARUTI CHAMBER, STEEL MARKET, KALAMBOLI,",
+    pageW / 2,
+    30,
+    { align: "center" },
+  );
+  doc.text(
+    "NAVI MUMBAI-410218   E-mail: deepanshufrightcarrier@gmail.com",
+    pageW / 2,
+    35,
+    { align: "center" },
+  );
+  doc.text("MOBILE NO.  9817783604 / 9817983604", pageW / 2, 40, {
+    align: "center",
+  });
 
-  doc.rect(20, 95, 170, 12);
-  doc.text("Freight Charges", 24, 103);
-  doc.text(String(partyBal + commission), 150, 103);
+  // ── INVOICE TITLE BAR ────────────────────────────────────────────────────────
+  doc.setLineWidth(0.4);
+  doc.setFillColor(240, 240, 240);
+  doc.rect(margin, 43, contentW, 8, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text("INVOICE", pageW / 2, 49, { align: "center" });
 
-  doc.rect(20, 107, 170, 12);
-  doc.text("Broker Commission", 24, 115);
-  doc.text(String(commission), 150, 115);
+  // ── M/S + BILL NO + DATE BOX ─────────────────────────────────────────────────
+  // M/S on left
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("M/S.", margin + 2, 59);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.party_name || "-", margin + 12, 59);
 
-  doc.rect(20, 119, 170, 12);
-  doc.text("Balance Amount", 24, 127);
-  doc.text(String(partyBal), 150, 127);
+  // Right side box for BILL NO
+  doc.setLineWidth(0.3);
+  doc.rect(pageW - margin - 60, 51, 60, 10);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("BILL NO :-", pageW - margin - 58, 58);
+  doc.setFont("helvetica", "normal");
+  doc.text(billNo, pageW - margin - 30, 58);
 
-  doc.text("Authorized Signatory", 150, 170);
-  doc.line(140, 165, 200, 165);
+  // DATE box below
+  doc.rect(pageW - margin - 60, 61, 60, 10);
+  doc.setFont("helvetica", "bold");
+  doc.text("DATE     :-", pageW - margin - 58, 68);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.date, pageW - margin - 30, 68);
 
-  doc.save(`${bill}_Party_Bill.pdf`);
+  // ── TABLE HEADER ─────────────────────────────────────────────────────────────
+  const tableTop = 73;
+  const colWidths = [18, 15, 27, 59, 17, 17, 33]; // total=186=contentW // Date, LRNo, VehicleNo, Particulars, Weight, Rate, Amount
+  const colX: number[] = [];
+  let cx = margin;
+  for (const w of colWidths) {
+    colX.push(cx);
+    cx += w;
+  }
+  const tableRight = cx;
+  const rowH = 8;
+
+  doc.setFillColor(230, 230, 230);
+  doc.rect(margin, tableTop, contentW, rowH, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
+  const headers = [
+    "Date",
+    "L.R.No",
+    "Vehicle No.",
+    "PARTICULARS",
+    "Weight",
+    "Rate",
+    "Amount",
+  ];
+  headers.forEach((h, i) => {
+    const isRight = i >= 4;
+    if (isRight) {
+      doc.text(h, colX[i] + colWidths[i] - 2, tableTop + 5.5, {
+        align: "right",
+      });
+    } else {
+      doc.text(h, colX[i] + 2, tableTop + 5.5);
+    }
+  });
+  // vertical lines for header
+  for (let i = 1; i < colX.length; i++) {
+    doc.line(colX[i], tableTop, colX[i], tableTop + rowH);
+  }
+  doc.line(tableRight, tableTop, tableRight, tableTop + rowH);
+
+  // ── TABLE ROW(S) ─────────────────────────────────────────────────────────────
+  // We print one main row per entry. Show route as Particulars.
+  const particulars =
+    `${entry.from_location} TO ${entry.to_location}`.toUpperCase();
+  const dataRowH = 18;
+  const rowTop = tableTop + rowH;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.rect(margin, rowTop, contentW, dataRowH);
+
+  // Date
+  doc.text(entry.date, colX[0] + 2, rowTop + 6);
+  // LR No (blank or bill)
+  doc.text("", colX[1] + 2, rowTop + 6);
+  // Vehicle No
+  doc.setFont("helvetica", "bold");
+  doc.text(entry.gadi_number || "-", colX[2] + 2, rowTop + 6);
+  doc.setFont("helvetica", "normal");
+  // Particulars
+  const partLines = doc.splitTextToSize(particulars, colWidths[3] - 4);
+  doc.text(partLines, colX[3] + 2, rowTop + 5);
+  // Weight
+  doc.text("Fix", colX[4] + colWidths[4] - 2, rowTop + 6, { align: "right" });
+  // Rate
+  doc.text("Fix", colX[5] + colWidths[5] - 2, rowTop + 6, { align: "right" });
+  // Amount
+  doc.setFont("helvetica", "bold");
+  doc.text(
+    `${partyRate.toLocaleString("en-IN")}.00`,
+    colX[6] + colWidths[6] - 2,
+    rowTop + 6,
+    { align: "right" },
+  );
+  doc.setFont("helvetica", "normal");
+
+  // vertical lines for data row
+  for (let i = 1; i < colX.length; i++) {
+    doc.line(colX[i], rowTop, colX[i], rowTop + dataRowH);
+  }
+  doc.line(tableRight, rowTop, tableRight, rowTop + dataRowH);
+
+  // ── TOTALS SECTION ───────────────────────────────────────────────────────────
+  const afterTable = rowTop + dataRowH;
+  const totalsX = colX[5]; // starts at Rate column
+  const totalsW = tableRight - totalsX;
+  const totRowH = 8;
+
+  // EPAN on left
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.rect(margin, afterTable, totalsX - margin, totRowH * 3);
+  doc.text("EPAN NO :- HFVPD2026A", margin + 2, afterTable + 5.5);
+
+  // Total
+  doc.rect(totalsX, afterTable, totalsW, totRowH);
+  doc.text("Total", totalsX + 2, afterTable + 5.5);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `${partyRate.toLocaleString("en-IN")}.00`,
+    tableRight - 2,
+    afterTable + 5.5,
+    { align: "right" },
+  );
+
+  // Less Adv
+  doc.setFont("helvetica", "bold");
+  doc.rect(totalsX, afterTable + totRowH, totalsW, totRowH);
+  doc.text("Less Adv.", totalsX + 2, afterTable + totRowH + 5.5);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `${partyAdv.toLocaleString("en-IN")}.00`,
+    tableRight - 2,
+    afterTable + totRowH + 5.5,
+    { align: "right" },
+  );
+
+  // Balance
+  doc.setFont("helvetica", "bold");
+  doc.rect(totalsX, afterTable + totRowH * 2, totalsW, totRowH);
+  doc.text("Balance", totalsX + 2, afterTable + totRowH * 2 + 5.5);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `${partyBal.toLocaleString("en-IN")}.00`,
+    tableRight - 2,
+    afterTable + totRowH * 2 + 5.5,
+    { align: "right" },
+  );
+
+  // ── RS IN WORDS ──────────────────────────────────────────────────────────────
+  const wordsY = afterTable + totRowH * 3;
+  doc.setLineWidth(0.3);
+  doc.rect(margin, wordsY, contentW, 10);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("RS. IN WORDS :-", margin + 2, wordsY + 4);
+  doc.setFont("helvetica", "normal");
+  doc.text(numberToWords(partyBal), margin + 38, wordsY + 4);
+
+  // ── BANK DETAILS + SIGNATURE ─────────────────────────────────────────────────
+  const bankY = wordsY + 10;
+  const bankW = 90;
+  doc.rect(margin, bankY, bankW, 42);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("Bank Details.", margin + bankW / 2, bankY + 6, { align: "center" });
+  doc.line(margin, bankY + 8, margin + bankW, bankY + 8);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("BANK NAME - HDFCBANK", margin + 4, bankY + 15);
+  doc.line(margin, bankY + 17, margin + bankW, bankY + 17);
+  doc.text("BRANCH : KALAMBOLI", margin + 4, bankY + 24);
+  doc.line(margin, bankY + 26, margin + bankW, bankY + 26);
+  doc.text("ACCOUNT No- 50200110750491", margin + 4, bankY + 33);
+  doc.line(margin, bankY + 35, margin + bankW, bankY + 35);
+  doc.text("IFSC CODE- HDFC0002822", margin + 4, bankY + 41);
+
+  // For DFC on right
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(180, 0, 0);
+  doc.text("For . DEEPANSHU FRIGHT CARRIER", pageW - margin - 2, bankY + 12, {
+    align: "right",
+  });
+  doc.setTextColor(0, 0, 0);
+
+  // ── AUTHORISED SIGNATORY ─────────────────────────────────────────────────────
+  const sigY = bankY + 42;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("AUTHORISED  SIGNATORY", pageW - margin - 2, sigY, {
+    align: "right",
+  });
+
+  // ── NOTES SECTION ────────────────────────────────────────────────────────────
+  const noteY = sigY + 6;
+  doc.rect(margin, noteY, contentW, 28);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("Subject To Mumbai Jurisdiction", margin + 2, noteY + 5);
+  doc.setFont("helvetica", "normal");
+  doc.text("Note :", margin + 2, noteY + 10);
+  doc.text(
+    "1. Payment should be made within 15 Days From the date of Bill",
+    margin + 4,
+    noteY + 15,
+  );
+  doc.text(
+    "2. Interest will be charged @ 18% P.A. if Bill is Not paid within 15 Days.",
+    margin + 4,
+    noteY + 20,
+  );
+  doc.text(
+    "3. Please Pay by Account Payee Cheque Only.",
+    margin + 4,
+    noteY + 25,
+  );
+
+  doc.save(`${bill}_Invoice.pdf`);
 }
 
 async function downloadLoadingSlip(entry: TransportEntry) {
@@ -266,7 +566,6 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text(entry.party_name || "-", margin + 18, y);
-  // underline party name
   const partyNameWidth = doc.getTextWidth(entry.party_name || "-");
   doc.setLineWidth(0.3);
   doc.line(margin + 18, y + 1, margin + 18 + partyNameWidth + 4, y + 1);
@@ -291,7 +590,6 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   doc.text(para1, margin, y);
   y += 5.5;
   doc.text(para2, margin, y);
-  // vehicle number in bold
   const p2w = doc.getTextWidth(para2);
   doc.setFont("helvetica", "bold");
   doc.text(vehicleNo, margin + p2w, y);
@@ -315,11 +613,9 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   const tableW = pageW - margin * 2;
   const leftW = tableW * 0.55;
 
-  // Outer border
   doc.setLineWidth(0.5);
   doc.rect(tableX, y, tableW, 46);
 
-  // Header row
   doc.setFillColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
@@ -327,18 +623,13 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   doc.text("FREIGHT DESCRIPTION", tableX + leftW / 2, y + 5.5, {
     align: "center",
   });
-  // Vertical divider in header
   doc.line(tableX + leftW, y, tableX + leftW, y + 46);
 
-  // Sub-header
   doc.setFontSize(9);
   doc.text("Said to contain", tableX + 4, y + 13);
   doc.text("As per Challan", tableX + leftW * 0.55, y + 13);
-
-  // Horizontal line after sub-header
   doc.line(tableX, y + 16, tableX + leftW, y + 16);
 
-  // Right side labels
   doc.setFont("helvetica", "normal");
   doc.text("DETENTION RS.", tableX + leftW + 4, y + 13);
   doc.line(tableX + leftW + 38, y + 14, tableX + tableW - 4, y + 14);
@@ -349,7 +640,6 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   doc.text("ACTUAL  WT", tableX + leftW + 4, y + 33);
   doc.line(tableX + leftW + 38, y + 34, tableX + tableW - 4, y + 34);
 
-  // FREIGHT RS row
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.text("FREIGHT RS.", tableX + 4, y + 23);
@@ -361,7 +651,6 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   );
   doc.line(tableX, y + 26, tableX + leftW, y + 26);
 
-  // ADVANCE RS row
   doc.setFont("helvetica", "bold");
   doc.text("ADVANCE RS.", tableX + 4, y + 33);
   doc.setFont("helvetica", "normal");
@@ -372,7 +661,6 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   );
   doc.line(tableX, y + 36, tableX + leftW, y + 36);
 
-  // BALANCE RS row
   doc.setFont("helvetica", "bold");
   doc.text("BALANCE RS.", tableX + 4, y + 43);
   doc.setFont("helvetica", "normal");
@@ -391,10 +679,8 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   doc.text("Payment Done at", tableX + 4, y + 6.5);
   doc.setFont("helvetica", "normal");
   doc.text("IMPS / NEFT", tableX + 38, y + 6.5);
-  // To Pay checkbox
   doc.rect(tableX + 72, y + 2, 5, 5);
   doc.text("To Pay", tableX + 79, y + 6.5);
-  // Adv Balance checkbox
   doc.rect(tableX + 100, y + 2, 5, 5);
   doc.text("Adv- Balance", tableX + 107, y + 6.5);
 
@@ -431,7 +717,6 @@ async function downloadLoadingSlip(entry: TransportEntry) {
   y += 5.5;
   doc.text("IFSC CODE : HDFC0002822", tableX, y);
 
-  // ── AUTHORISED SIGNATORY ─────────────────────────────────────────
   const sigY = y + 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
@@ -709,7 +994,6 @@ function EditDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Trip */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Date</Label>
@@ -752,7 +1036,6 @@ function EditDialog({
 
           <Separator />
 
-          {/* Party */}
           <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
             Party Details
           </p>
@@ -837,7 +1120,6 @@ function EditDialog({
 
           <Separator />
 
-          {/* Owner */}
           <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
             Owner Details
           </p>
@@ -1099,17 +1381,17 @@ function EntryRow({
               LR
             </Button>
 
-            {/* Party Bill PDF */}
+            {/* Party Bill / Invoice PDF */}
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 font-semibold"
+              className="h-8 px-2 text-xs text-blue-700 hover:text-blue-900 hover:bg-blue-50 font-semibold"
               onClick={() => downloadBill(entry)}
               data-ocid={`records.party_bill.button.${index}`}
-              title="Download Party Bill PDF"
+              title="Download Invoice PDF"
             >
               <FileText className="w-3.5 h-3.5 mr-1" />
-              Bill
+              Invoice
             </Button>
 
             {/* Loading Slip PDF */}
