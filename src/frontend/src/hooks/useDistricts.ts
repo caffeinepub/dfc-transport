@@ -1,0 +1,142 @@
+import { useEffect, useState } from "react";
+
+const FALLBACK_DISTRICTS = [
+  "Delhi",
+  "Mumbai",
+  "Pune",
+  "Chennai",
+  "Kolkata",
+  "Bengaluru",
+  "Hyderabad",
+  "Ahmedabad",
+  "Rohtak",
+  "Sonipat",
+  "Panipat",
+  "Hisar",
+  "Bhiwani",
+  "Kaithal",
+  "Karnal",
+  "Kurukshetra",
+  "Ambala",
+  "Yamunanagar",
+  "Sirsa",
+  "Fatehabad",
+  "Jind",
+  "Palwal",
+  "Rewari",
+  "Mahendragarh",
+  "Patna",
+  "Madhubani",
+  "Muzaffarpur",
+  "Bhagalpur",
+  "Gaya",
+  "Darbhanga",
+  "Nalanda",
+  "Jaipur",
+  "Jodhpur",
+  "Udaipur",
+  "Kota",
+  "Bikaner",
+  "Ajmer",
+  "Alwar",
+  "Sikar",
+  "Lucknow",
+  "Kanpur",
+  "Agra",
+  "Varanasi",
+  "Allahabad",
+  "Meerut",
+  "Ghaziabad",
+  "Noida",
+  "Indore",
+  "Bhopal",
+  "Jabalpur",
+  "Gwalior",
+  "Rewa",
+  "Sagar",
+  "Satna",
+  "Nagpur",
+  "Nashik",
+  "Aurangabad",
+  "Solapur",
+  "Kolhapur",
+  "Thane",
+  "Kalamboli",
+  "Amritsar",
+  "Ludhiana",
+  "Jalandhar",
+  "Patiala",
+  "Chandigarh",
+  "Madurai",
+  "Coimbatore",
+  "Salem",
+  "Tiruchirappalli",
+  "Tirunelveli",
+  "Ranchi",
+  "Dhanbad",
+  "Jamshedpur",
+  "Bokaro",
+  "Bhubaneswar",
+  "Cuttack",
+  "Rourkela",
+  "Guwahati",
+  "Dibrugarh",
+  "Silchar",
+  "Dehradun",
+  "Haridwar",
+  "Rishikesh",
+  "Shimla",
+  "Manali",
+  "Dharamshala",
+  "Srinagar",
+  "Jammu",
+  "Leh",
+  "Raipur",
+  "Bilaspur",
+  "Bhilai",
+  "Visakhapatnam",
+  "Vijayawada",
+  "Guntur",
+  "Tirupati",
+  "Kochi",
+  "Thiruvananthapuram",
+  "Kozhikode",
+  "Thrissur",
+  "Vadodara",
+  "Surat",
+  "Rajkot",
+  "Gandhinagar",
+  "Bhavnagar",
+  "Mangaluru",
+  "Mysuru",
+  "Hubballi",
+  "Belagavi",
+  "Madhupur",
+  "Madhepura",
+  "Madhubani",
+  "Madhopur",
+];
+
+export function useDistricts() {
+  const [districts, setDistricts] = useState<string[]>(FALLBACK_DISTRICTS);
+
+  useEffect(() => {
+    fetch(
+      "https://raw.githubusercontent.com/ashwin711/india-states-cities/master/districts.json",
+    )
+      .then((r) => r.json())
+      .then((data: Record<string, string[]>) => {
+        const all: string[] = [];
+        for (const arr of Object.values(data)) {
+          all.push(...arr);
+        }
+        const unique = Array.from(new Set(all)).sort();
+        if (unique.length > 0) setDistricts(unique);
+      })
+      .catch(() => {
+        // keep fallback
+      });
+  }, []);
+
+  return districts;
+}

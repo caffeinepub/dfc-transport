@@ -7,23 +7,37 @@ import {
   TableProperties,
   TrendingUp,
   Truck,
+  Users,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { useGetTotalCommission } from "../hooks/useQueries";
 import EntryForm from "./EntryForm";
 import MonthlyReport from "./MonthlyReport";
+import PartySummary from "./PartySummary";
 import RecordsTable from "./RecordsTable";
 
-type Tab = "entries" | "records" | "monthly";
+type Tab = "entries" | "records" | "monthly" | "summary";
 
 interface Props {
   onLogout: () => void;
 }
 
+const LAST_TAB_KEY = "dfcLastTab";
+
 export default function Dashboard({ onLogout }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>("entries");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const saved = localStorage.getItem(LAST_TAB_KEY) as Tab | null;
+    return saved && ["entries", "records", "monthly", "summary"].includes(saved)
+      ? saved
+      : "entries";
+  });
   const { data: totalCommission = 0 } = useGetTotalCommission();
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    localStorage.setItem(LAST_TAB_KEY, tab);
+  };
 
   const isRecords = activeTab === "records";
 
@@ -63,14 +77,14 @@ export default function Dashboard({ onLogout }: Props) {
           </div>
 
           {/* Tab navigation */}
-          <div className="flex gap-1 pb-0">
+          <div className="flex gap-1 pb-0 flex-wrap">
             <button
               className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all flex items-center gap-2 ${
                 activeTab === "entries"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-white/60 hover:text-white/90 hover:bg-white/10"
               }`}
-              onClick={() => setActiveTab("entries")}
+              onClick={() => handleTabChange("entries")}
               type="button"
               data-ocid="nav.tab"
             >
@@ -83,7 +97,7 @@ export default function Dashboard({ onLogout }: Props) {
                   ? "bg-background text-foreground shadow-sm"
                   : "text-white/60 hover:text-white/90 hover:bg-white/10"
               }`}
-              onClick={() => setActiveTab("records")}
+              onClick={() => handleTabChange("records")}
               type="button"
               data-ocid="records.tab"
             >
@@ -92,11 +106,24 @@ export default function Dashboard({ onLogout }: Props) {
             </button>
             <button
               className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all flex items-center gap-2 ${
+                activeTab === "summary"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-white/60 hover:text-white/90 hover:bg-white/10"
+              }`}
+              onClick={() => handleTabChange("summary")}
+              type="button"
+              data-ocid="summary.tab"
+            >
+              <Users className="w-4 h-4" />
+              Party / Owner
+            </button>
+            <button
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all flex items-center gap-2 ${
                 activeTab === "monthly"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-white/60 hover:text-white/90 hover:bg-white/10"
               }`}
-              onClick={() => setActiveTab("monthly")}
+              onClick={() => handleTabChange("monthly")}
               type="button"
               data-ocid="monthly.tab"
             >
@@ -120,9 +147,11 @@ export default function Dashboard({ onLogout }: Props) {
           transition={{ duration: 0.25, ease: "easeOut" }}
         >
           {activeTab === "entries" ? (
-            <EntryForm onSuccess={() => setActiveTab("records")} />
+            <EntryForm onSuccess={() => handleTabChange("records")} />
           ) : activeTab === "records" ? (
             <RecordsTable />
+          ) : activeTab === "summary" ? (
+            <PartySummary />
           ) : (
             <MonthlyReport />
           )}

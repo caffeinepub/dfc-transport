@@ -179,6 +179,7 @@ function downloadBill(entry: TransportEntry) {
 
   doc.save(`${bill}_Party_Bill.pdf`);
 }
+
 async function downloadLoadingSlip(entry: TransportEntry) {
   // biome-ignore lint/suspicious/noExplicitAny: jsPDF loaded via CDN
   const { jsPDF } = (window as any).jspdf;
@@ -190,20 +191,14 @@ async function downloadLoadingSlip(entry: TransportEntry) {
 
   const pageW = 210;
   const margin = 14;
-  const contentW = pageW - margin * 2;
 
-  // ── RED HEADER ───────────────────────────────────────────────────
-  const headerH = 38;
-  doc.setFillColor(200, 0, 0);
-  doc.rect(0, 0, pageW, headerH, "F");
-
-  // ── LOGO ─────────────────────────────────────────────────────────
+  // ── LOGO (top-left) ──────────────────────────────────────────────
   try {
     await new Promise<void>((resolve) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
-        doc.addImage(img, "PNG", margin, 4, 30, 30);
+        doc.addImage(img, "PNG", margin, 6, 28, 22);
         resolve();
       };
       img.onerror = () => resolve();
@@ -211,161 +206,236 @@ async function downloadLoadingSlip(entry: TransportEntry) {
     });
   } catch (_) {}
 
-  doc.setTextColor(255, 255, 255);
+  // ── COMPANY NAME (red, bold, large) ──────────────────────────────
+  doc.setTextColor(180, 0, 0);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text("DEEPANSHU FRIGHT CARRIER", pageW / 2 + 10, 12, { align: "center" });
+  doc.text("DEEPANSHU FRIGHT CARRIER", pageW / 2, 14, { align: "center" });
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("Sister Concern : Shivani Roadlines", pageW / 2 + 10, 19, {
-    align: "center",
-  });
-
-  doc.setFontSize(8);
-  doc.text(
-    "Mumbai Office : 102, Ridhi Arcade, Plot No.857 C, Near RTO Office, Steel Market, Kalamboli, Mumbai - 410218",
-    pageW / 2 + 10,
-    25,
-    { align: "center" },
-  );
-  doc.text(
-    "Mobile : 9817783604 / 9817983604  |  Email : deepanshufrightcarrier@gmail.com",
-    pageW / 2 + 10,
-    31,
-    { align: "center" },
-  );
-
-  // ── TITLE ────────────────────────────────────────────────────────
+  // ── SISTER CONCERN ───────────────────────────────────────────────
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
-  doc.text("LOADING SLIP", pageW / 2, 46, { align: "center" });
-  doc.setLineWidth(0.5);
-  doc.line(margin, 49, pageW - margin, 49);
+  doc.setFontSize(11);
+  doc.text("SISTER CONCERN ; SHIVANI ROADLINES", pageW / 2, 21, {
+    align: "center",
+  });
+
+  // ── ADDRESS / CONTACT ────────────────────────────────────────────
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.text(
+    "Mumbai Office : 102 , Ridhi Arcade , Plot No.857 C , Near RTO Office , Steel Market , Kalamboli , Mumbai 410218",
+    pageW / 2,
+    27,
+    { align: "center" },
+  );
+  doc.text(
+    "Mobile No. 9817783604 / 9817983604    Email_id : deepanshufrightcarrier@gmail.com",
+    pageW / 2,
+    32,
+    { align: "center" },
+  );
+
+  // ── DIVIDER ──────────────────────────────────────────────────────
+  doc.setLineWidth(0.8);
+  doc.line(margin, 36, pageW - margin, 36);
+
+  // ── LOADING SLIP TITLE ───────────────────────────────────────────
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("Loading Slip", pageW / 2, 43, { align: "center" });
+  doc.setLineWidth(0.4);
+  doc.line(pageW / 2 - 20, 45, pageW / 2 + 20, 45);
 
   // ── SLIP NO / DATE ───────────────────────────────────────────────
-  doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  let y = 57;
-  doc.rect(margin, y - 5, contentW / 2 - 2, 10);
-  doc.rect(margin + contentW / 2 + 2, y - 5, contentW / 2 - 2, 10);
-  doc.setFont("helvetica", "bold");
-  doc.text("Loading Slip No:", margin + 2, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(bill, margin + 36, y);
-  doc.setFont("helvetica", "bold");
-  doc.text("Date:", margin + contentW / 2 + 4, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(entry.date, margin + contentW / 2 + 18, y);
-
-  // ── PARTY ────────────────────────────────────────────────────────
-  y = 62;
-  doc.rect(margin, y - 5, contentW, 10);
-  doc.setFont("helvetica", "bold");
-  doc.text("TO, M/S :", margin + 2, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(entry.party_name || "-", margin + 22, y);
-
-  // ── VEHICLE / OWNER ──────────────────────────────────────────────
-  y = 78;
-  doc.rect(margin, y - 5, contentW / 2 - 2, 10);
-  doc.rect(margin + contentW / 2 + 2, y - 5, contentW / 2 - 2, 10);
-  doc.setFont("helvetica", "bold");
-  doc.text("Vehicle No:", margin + 2, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(entry.gadi_number || "-", margin + 26, y);
-  doc.setFont("helvetica", "bold");
-  doc.text("Owner:", margin + contentW / 2 + 4, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(entry.owner_name || "-", margin + contentW / 2 + 20, y);
-
-  // ── ROUTE ────────────────────────────────────────────────────────
-  y = 94;
-  doc.rect(margin, y - 5, contentW / 2 - 2, 10);
-  doc.rect(margin + contentW / 2 + 2, y - 5, contentW / 2 - 2, 10);
-  doc.setFont("helvetica", "bold");
-  doc.text("From Station:", margin + 2, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(entry.from_location || "-", margin + 30, y);
-  doc.setFont("helvetica", "bold");
-  doc.text("To Station:", margin + contentW / 2 + 4, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(entry.to_location || "-", margin + contentW / 2 + 26, y);
-
-  // ── FREIGHT TABLE ────────────────────────────────────────────────
-  y = 108;
-  doc.setFillColor(220, 220, 220);
-  doc.rect(margin, y - 6, contentW, 8, "F");
-  doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("Description", margin + 4, y - 0.5);
-  doc.text("Amount (Rs)", pageW - margin - 4, y - 0.5, { align: "right" });
-
-  const rows = [
-    ["Freight Rs", `Rs. ${freight.toLocaleString("en-IN")}`],
-    ["Advance Rs", `Rs. ${advance.toLocaleString("en-IN")}`],
-    ["Balance Rs", `Rs. ${balance.toLocaleString("en-IN")}`],
-  ];
-  y += 4;
-  doc.setFont("helvetica", "normal");
-  for (const [label, val] of rows) {
-    doc.rect(margin, y - 0.5, contentW, 9);
-    doc.text(label, margin + 4, y + 5.5);
-    doc.text(val, pageW - margin - 4, y + 5.5, { align: "right" });
-    y += 9;
-  }
-
-  // ── PAYMENT ──────────────────────────────────────────────────────
-  y += 6;
+  let y = 54;
+  doc.text("Loading slip  No.", margin, y);
+  doc.text(bill, margin + 38, y);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("Payment Details", margin, y);
-  doc.line(margin, y + 1.5, pageW - margin, y + 1.5);
+  doc.text("Date", pageW - margin - 40, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.date, pageW - margin - 25, y);
 
+  // ── TO / M/S ─────────────────────────────────────────────────────
   y += 9;
+  doc.text("TO ,", margin, y);
+  y += 6;
+  doc.text("M/S ,", margin, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(entry.party_name || "-", margin + 18, y);
+  // underline party name
+  const partyNameWidth = doc.getTextWidth(entry.party_name || "-");
+  doc.setLineWidth(0.3);
+  doc.line(margin + 18, y + 1, margin + 18 + partyNameWidth + 4, y + 1);
+
+  // ── DEAR SIR PARAGRAPH ───────────────────────────────────────────
+  y += 12;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.rect(margin, y - 5, contentW, 10);
-  doc.setFont("helvetica", "bold");
-  doc.text("Payment Done At (IMPS / NEFT) :", margin + 2, y);
-  doc.setFont("helvetica", "normal");
-  doc.text("__________________________", margin + 70, y);
+  doc.text("Dear Sir,", margin, y);
+  y += 6;
+  const para1 =
+    "        As  Per Telephonic / Personal  Discussion  with  you, here we";
+  const para2 = "are sending  herewith  our Vehicle no ";
+  const vehicleNo = entry.gadi_number || "-";
+  const para3 = " of Owner Name";
+  const para4 = `${entry.owner_name || "__________________"}  with Driver  __________________`;
+  const para5 = `from Station  ${entry.from_location || "__________"}    To    ${entry.to_location || "__________"}`;
+  const para6 =
+    "having mobile no  __________________  kindly load the same & handover the";
+  const para7 = "necessary  transit paper  for the same  & obliged.";
 
-  y += 14;
+  doc.text(para1, margin, y);
+  y += 5.5;
+  doc.text(para2, margin, y);
+  // vehicle number in bold
+  const p2w = doc.getTextWidth(para2);
+  doc.setFont("helvetica", "bold");
+  doc.text(vehicleNo, margin + p2w, y);
+  const vw = doc.getTextWidth(vehicleNo);
+  doc.setFont("helvetica", "normal");
+  doc.text(para3, margin + p2w + vw, y);
+  y += 5.5;
+  doc.text(para4, margin, y);
+  y += 5.5;
+  doc.setFont("helvetica", "bold");
+  doc.text(para5, margin, y);
+  doc.setFont("helvetica", "normal");
+  y += 5.5;
+  doc.text(para6, margin, y);
+  y += 5.5;
+  doc.text(para7, margin, y);
+
+  // ── FREIGHT DESCRIPTION TABLE ─────────────────────────────────────
+  y += 8;
+  const tableX = margin;
+  const tableW = pageW - margin * 2;
+  const leftW = tableW * 0.55;
+
+  // Outer border
+  doc.setLineWidth(0.5);
+  doc.rect(tableX, y, tableW, 46);
+
+  // Header row
+  doc.setFillColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.rect(tableX, y, tableW, 8);
+  doc.text("FREIGHT DESCRIPTION", tableX + leftW / 2, y + 5.5, {
+    align: "center",
+  });
+  // Vertical divider in header
+  doc.line(tableX + leftW, y, tableX + leftW, y + 46);
+
+  // Sub-header
+  doc.setFontSize(9);
+  doc.text("Said to contain", tableX + 4, y + 13);
+  doc.text("As per Challan", tableX + leftW * 0.55, y + 13);
+
+  // Horizontal line after sub-header
+  doc.line(tableX, y + 16, tableX + leftW, y + 16);
+
+  // Right side labels
+  doc.setFont("helvetica", "normal");
+  doc.text("DETENTION RS.", tableX + leftW + 4, y + 13);
+  doc.line(tableX + leftW + 38, y + 14, tableX + tableW - 4, y + 14);
+
+  doc.text("GUARANTEE WT", tableX + leftW + 4, y + 23);
+  doc.line(tableX + leftW + 38, y + 24, tableX + tableW - 4, y + 24);
+
+  doc.text("ACTUAL  WT", tableX + leftW + 4, y + 33);
+  doc.line(tableX + leftW + 38, y + 34, tableX + tableW - 4, y + 34);
+
+  // FREIGHT RS row
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("FREIGHT RS.", tableX + 4, y + 23);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `${freight.toLocaleString("en-IN")}/-`,
+    tableX + leftW * 0.55,
+    y + 23,
+  );
+  doc.line(tableX, y + 26, tableX + leftW, y + 26);
+
+  // ADVANCE RS row
+  doc.setFont("helvetica", "bold");
+  doc.text("ADVANCE RS.", tableX + 4, y + 33);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `${advance.toLocaleString("en-IN")}/-`,
+    tableX + leftW * 0.55,
+    y + 33,
+  );
+  doc.line(tableX, y + 36, tableX + leftW, y + 36);
+
+  // BALANCE RS row
+  doc.setFont("helvetica", "bold");
+  doc.text("BALANCE RS.", tableX + 4, y + 43);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `${balance.toLocaleString("en-IN")}/-`,
+    tableX + leftW * 0.55,
+    y + 43,
+  );
+
+  // ── PAYMENT ROW ──────────────────────────────────────────────────
+  y += 46;
+  doc.setLineWidth(0.5);
+  doc.rect(tableX, y, tableW, 10);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("Payment Done at", tableX + 4, y + 6.5);
+  doc.setFont("helvetica", "normal");
+  doc.text("IMPS / NEFT", tableX + 38, y + 6.5);
   // To Pay checkbox
-  doc.rect(margin, y - 4, 5, 5);
-  doc.text("To Pay", margin + 7, y);
+  doc.rect(tableX + 72, y + 2, 5, 5);
+  doc.text("To Pay", tableX + 79, y + 6.5);
   // Adv Balance checkbox
-  doc.rect(margin + 40, y - 4, 5, 5);
-  doc.text("Adv Balance", margin + 47, y);
+  doc.rect(tableX + 100, y + 2, 5, 5);
+  doc.text("Adv- Balance", tableX + 107, y + 6.5);
+
+  // ── THANKING YOU / FOR COMPANY ───────────────────────────────────
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Thanking You", tableX, y);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(180, 0, 0);
+  doc.text("For   DEEPANSHU FRIGHT CARRIER", pageW - margin, y, {
+    align: "right",
+  });
+  doc.setTextColor(0, 0, 0);
+
+  // ── PAN NO ───────────────────────────────────────────────────────
+  y += 8;
+  doc.setTextColor(180, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("PAN NO:- HFVPD2026A", tableX, y);
+  doc.setTextColor(0, 0, 0);
 
   // ── BANK DETAILS ─────────────────────────────────────────────────
-  y += 14;
-  doc.setFillColor(240, 240, 240);
-  doc.rect(margin, y - 6, contentW, 32, "F");
+  y += 7;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("Bank Details", margin + 4, y);
-  doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text("Bank   : HDFC Bank", margin + 4, y + 8);
-  doc.text("A/C No : XXXXXXXXXXXX", margin + 4, y + 16);
-  doc.text("IFSC   : HDFC0000000", margin + 4, y + 24);
+  doc.text("Bank Detals :", tableX, y);
+  doc.setFont("helvetica", "normal");
+  y += 6;
+  doc.text("Bank Name : HDFC BANK", tableX, y);
+  y += 5.5;
+  doc.text("Bank A/c No.50200110750491", tableX, y);
+  y += 5.5;
+  doc.text("IFSC CODE : HDFC0002822", tableX, y);
 
-  // ── SIGNATURE ────────────────────────────────────────────────────
-  y += 42;
-  doc.line(pageW - margin - 60, y, pageW - margin, y);
+  // ── AUTHORISED SIGNATORY ─────────────────────────────────────────
+  const sigY = y + 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("For Deepanshu Fright Carrier", pageW - margin - 30, y + 5, {
-    align: "center",
-  });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Authorised Signatory", pageW - margin - 30, y + 10, {
-    align: "center",
-  });
+  doc.text("Authorised Signatory", pageW - margin, sigY, { align: "right" });
 
   doc.save(`${bill}_Loading_Slip.pdf`);
 }

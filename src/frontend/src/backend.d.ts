@@ -19,11 +19,17 @@ export interface TransportEntry {
     party_name: string;
     party_rate: number;
     party_advance: number;
+    party_advance_date: string;
+    party_advance_proof: string;
     to_location: string;
     owner_name: string;
     owner_rate: number;
     from_location: string;
+    owner_advance_date: string;
+    owner_advance_proof: string;
     comment: string;
+    owner_paid: boolean;
+    party_paid: boolean;
 }
 export enum UserRole {
     admin = "admin",
@@ -31,7 +37,10 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    addEntry(date: string, gadiNumber: string, fromLocation: string, toLocation: string, partyName: string, partyRate: number, partyAdvance: number, ownerName: string, ownerRate: number, ownerAdvance: number, comment: string): Promise<bigint>;
+    addEntry(date: string, gadiNumber: string, fromLocation: string, toLocation: string, partyName: string, partyRate: number, partyAdvance: number, partyAdvanceDate: string, partyAdvanceProof: string, ownerName: string, ownerRate: number, ownerAdvance: number, ownerAdvanceDate: string, ownerAdvanceProof: string, comment: string): Promise<bigint>;
+    updateEntry(billNo: bigint, date: string, gadiNumber: string, fromLocation: string, toLocation: string, partyName: string, partyRate: number, partyAdvance: number, partyAdvanceDate: string, partyAdvanceProof: string, ownerName: string, ownerRate: number, ownerAdvance: number, ownerAdvanceDate: string, ownerAdvanceProof: string, comment: string, ownerPaid: boolean, partyPaid: boolean): Promise<boolean>;
+    toggleOwnerPaid(billNo: bigint): Promise<boolean>;
+    togglePartyPaid(billNo: bigint): Promise<boolean>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteEntry(billNo: bigint): Promise<boolean>;
     getAllEntries(): Promise<Array<TransportEntry>>;

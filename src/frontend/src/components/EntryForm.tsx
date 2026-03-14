@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { useDistricts } from "../hooks/useDistricts";
 import { useAddEntry } from "../hooks/useQueries";
+import DistrictSearchInput from "./DistrictSearchInput";
 
 interface EntryFormProps {
   onSuccess?: () => void;
@@ -91,6 +93,7 @@ function ImageUploadField({
 
 export default function EntryForm({ onSuccess }: EntryFormProps) {
   const addEntry = useAddEntry();
+  const districts = useDistricts();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -230,28 +233,28 @@ export default function EntryForm({ onSuccess }: EntryFormProps) {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="from" className="text-xs font-medium">
-                  From
+                  From District
                 </Label>
-                <Input
+                <DistrictSearchInput
                   id="from"
-                  placeholder="Origin city"
                   value={form.fromLocation}
-                  onChange={update("fromLocation")}
+                  onChange={(v) => setForm((p) => ({ ...p, fromLocation: v }))}
+                  placeholder="Search district..."
+                  districts={districts}
                   data-ocid="entry.from.input"
-                  className="h-9"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="to" className="text-xs font-medium">
-                  To
+                  To District
                 </Label>
-                <Input
+                <DistrictSearchInput
                   id="to"
-                  placeholder="Destination city"
                   value={form.toLocation}
-                  onChange={update("toLocation")}
+                  onChange={(v) => setForm((p) => ({ ...p, toLocation: v }))}
+                  placeholder="Search district..."
+                  districts={districts}
                   data-ocid="entry.to.input"
-                  className="h-9"
                 />
               </div>
             </div>

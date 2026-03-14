@@ -17,17 +17,6 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-function some<T>(value: T): Some<T> {
-    return {
-        __kind__: "Some",
-        value: value
-    };
-}
-function none(): None {
-    return {
-        __kind__: "None"
-    };
-}
 function isNone<T>(option: Option<T>): option is None {
     return option.__kind__ === "None";
 }
@@ -41,9 +30,7 @@ function unwrap<T>(option: Option<T>): T {
     return option.value;
 }
 function candid_some<T>(value: T): [T] {
-    return [
-        value
-    ];
+    return [value];
 }
 function candid_none<T>(): [] {
     return [];
@@ -65,11 +52,7 @@ export class ExternalBlob {
         return new ExternalBlob(url, null);
     }
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob {
-        const url = URL.createObjectURL(new Blob([
-            new Uint8Array(blob)
-        ], {
-            type: 'application/octet-stream'
-        }));
+        const url = URL.createObjectURL(new Blob([new Uint8Array(blob)], { type: 'application/octet-stream' }));
         return new ExternalBlob(url, blob);
     }
     public async getBytes(): Promise<Uint8Array<ArrayBuffer>> {
@@ -101,11 +84,17 @@ export interface TransportEntry {
     party_name: string;
     party_rate: number;
     party_advance: number;
+    party_advance_date: string;
+    party_advance_proof: string;
     to_location: string;
     owner_name: string;
     owner_rate: number;
     from_location: string;
+    owner_advance_date: string;
+    owner_advance_proof: string;
     comment: string;
+    owner_paid: boolean;
+    party_paid: boolean;
 }
 export enum UserRole {
     admin = "admin",
@@ -114,7 +103,10 @@ export enum UserRole {
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
-    addEntry(date: string, gadiNumber: string, fromLocation: string, toLocation: string, partyName: string, partyRate: number, partyAdvance: number, ownerName: string, ownerRate: number, ownerAdvance: number, comment: string): Promise<bigint>;
+    addEntry(date: string, gadiNumber: string, fromLocation: string, toLocation: string, partyName: string, partyRate: number, partyAdvance: number, partyAdvanceDate: string, partyAdvanceProof: string, ownerName: string, ownerRate: number, ownerAdvance: number, ownerAdvanceDate: string, ownerAdvanceProof: string, comment: string): Promise<bigint>;
+    updateEntry(billNo: bigint, date: string, gadiNumber: string, fromLocation: string, toLocation: string, partyName: string, partyRate: number, partyAdvance: number, partyAdvanceDate: string, partyAdvanceProof: string, ownerName: string, ownerRate: number, ownerAdvance: number, ownerAdvanceDate: string, ownerAdvanceProof: string, comment: string, ownerPaid: boolean, partyPaid: boolean): Promise<boolean>;
+    toggleOwnerPaid(billNo: bigint): Promise<boolean>;
+    togglePartyPaid(billNo: bigint): Promise<boolean>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteEntry(billNo: bigint): Promise<boolean>;
     getAllEntries(): Promise<Array<TransportEntry>>;
@@ -131,171 +123,78 @@ export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
         if (this.processError) {
-            try {
-                const result = await this.actor._initializeAccessControlWithSecret(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor._initializeAccessControlWithSecret(arg0);
-            return result;
-        }
+            try { const result = await this.actor._initializeAccessControlWithSecret(arg0); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor._initializeAccessControlWithSecret(arg0); return result; }
     }
-    async addEntry(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: number, arg6: number, arg7: string, arg8: number, arg9: number, arg10: string): Promise<bigint> {
+    async addEntry(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: number, arg6: number, arg7: string, arg8: string, arg9: string, arg10: number, arg11: number, arg12: string, arg13: string, arg14: string): Promise<bigint> {
         if (this.processError) {
-            try {
-                const result = await this.actor.addEntry(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.addEntry(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-            return result;
-        }
+            try { const result = await this.actor.addEntry(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.addEntry(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14); return result; }
+    }
+    async updateEntry(arg0: bigint, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: number, arg7: number, arg8: string, arg9: string, arg10: string, arg11: number, arg12: number, arg13: string, arg14: string, arg15: string, arg16: boolean, arg17: boolean): Promise<boolean> {
+        if (this.processError) {
+            try { const result = await this.actor.updateEntry(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.updateEntry(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17); return result; }
+    }
+    async toggleOwnerPaid(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try { const result = await this.actor.toggleOwnerPaid(arg0); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.toggleOwnerPaid(arg0); return result; }
+    }
+    async togglePartyPaid(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try { const result = await this.actor.togglePartyPaid(arg0); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.togglePartyPaid(arg0); return result; }
     }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
-            try {
-                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
-            return result;
-        }
+            try { const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1)); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1)); return result; }
     }
     async deleteEntry(arg0: bigint): Promise<boolean> {
         if (this.processError) {
-            try {
-                const result = await this.actor.deleteEntry(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.deleteEntry(arg0);
-            return result;
-        }
+            try { const result = await this.actor.deleteEntry(arg0); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.deleteEntry(arg0); return result; }
     }
     async getAllEntries(): Promise<Array<TransportEntry>> {
         if (this.processError) {
-            try {
-                const result = await this.actor.getAllEntries();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getAllEntries();
-            return result;
-        }
+            try { const result = await this.actor.getAllEntries(); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.getAllEntries(); return result; }
     }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
-            try {
-                const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
-        }
+            try { const result = await this.actor.getCallerUserProfile(); return from_candid_opt_n3(this._uploadFile, this._downloadFile, result); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.getCallerUserProfile(); return from_candid_opt_n3(this._uploadFile, this._downloadFile, result); }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
-            try {
-                const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
-        }
+            try { const result = await this.actor.getCallerUserRole(); return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.getCallerUserRole(); return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result); }
     }
     async getEntry(arg0: bigint): Promise<TransportEntry | null> {
         if (this.processError) {
-            try {
-                const result = await this.actor.getEntry(arg0);
-                return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getEntry(arg0);
-            return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
-        }
+            try { const result = await this.actor.getEntry(arg0); return from_candid_opt_n6(this._uploadFile, this._downloadFile, result); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.getEntry(arg0); return from_candid_opt_n6(this._uploadFile, this._downloadFile, result); }
     }
     async getTotalCommission(): Promise<number> {
         if (this.processError) {
-            try {
-                const result = await this.actor.getTotalCommission();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getTotalCommission();
-            return result;
-        }
+            try { const result = await this.actor.getTotalCommission(); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.getTotalCommission(); return result; }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
-            try {
-                const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
-        }
+            try { const result = await this.actor.getUserProfile(arg0); return from_candid_opt_n3(this._uploadFile, this._downloadFile, result); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.getUserProfile(arg0); return from_candid_opt_n3(this._uploadFile, this._downloadFile, result); }
     }
     async isCallerAdmin(): Promise<boolean> {
         if (this.processError) {
-            try {
-                const result = await this.actor.isCallerAdmin();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.isCallerAdmin();
-            return result;
-        }
+            try { const result = await this.actor.isCallerAdmin(); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.isCallerAdmin(); return result; }
     }
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
-            try {
-                const result = await this.actor.saveCallerUserProfile(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.saveCallerUserProfile(arg0);
-            return result;
-        }
+            try { const result = await this.actor.saveCallerUserProfile(arg0); return result; } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const result = await this.actor.saveCallerUserProfile(arg0); return result; }
     }
 }
 function from_candid_UserRole_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
@@ -307,50 +206,28 @@ function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Ar
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_TransportEntry]): TransportEntry | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    admin: null;
-} | {
-    user: null;
-} | {
-    guest: null;
-}): UserRole {
+function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: { admin: null; } | { user: null; } | { guest: null; }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
 function to_candid_UserRole_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n2(_uploadFile, _downloadFile, value);
 }
-function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
-    admin: null;
-} | {
-    user: null;
-} | {
-    guest: null;
-} {
-    return value == UserRole.admin ? {
-        admin: null
-    } : value == UserRole.user ? {
-        user: null
-    } : value == UserRole.guest ? {
-        guest: null
-    } : value;
+function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): { admin: null; } | { user: null; } | { guest: null; } {
+    return value == UserRole.admin ? { admin: null } : value == UserRole.user ? { user: null } : value == UserRole.guest ? { guest: null } : value;
 }
 export interface CreateActorOptions {
     agent?: Agent;
     agentOptions?: HttpAgentOptions;
     actorOptions?: ActorConfig;
     processError?: (error: unknown) => never;
+    uploadFile?: (file: ExternalBlob) => Promise<Uint8Array>;
+    downloadFile?: (file: Uint8Array) => Promise<ExternalBlob>;
 }
 export function createActor(canisterId: string, _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, options: CreateActorOptions = {}): Backend {
-    const agent = options.agent || HttpAgent.createSync({
-        ...options.agentOptions
-    });
+    const agent = options.agent || HttpAgent.createSync({ ...options.agentOptions });
     if (options.agent && options.agentOptions) {
         console.warn("Detected both agent and agentOptions passed to createActor. Ignoring agentOptions and proceeding with the provided agent.");
     }
-    const actor = Actor.createActor<_SERVICE>(idlFactory, {
-        agent,
-        canisterId: canisterId,
-        ...options.actorOptions
-    });
+    const actor = Actor.createActor<_SERVICE>(idlFactory, { agent, canisterId: canisterId, ...options.actorOptions });
     return new Backend(actor, _uploadFile, _downloadFile, options.processError);
 }
